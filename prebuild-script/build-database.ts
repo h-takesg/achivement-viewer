@@ -1,5 +1,5 @@
 import { load } from "js-yaml";
-import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync } from "fs";
 import { Article, ArticleMetaInfo } from "./types";
 import { basename, dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -10,6 +10,7 @@ const ARTICLES_DIR = resolve(SCRIPT_DIR, "../articles");
 const BUILD_DIR = resolve(SCRIPT_DIR, "../build");
 const DATABASE_FILENAME = "achivement.sqlite3";
 const DATABASE_FILEPATH = join(BUILD_DIR, DATABASE_FILENAME);
+const ATTACHFILES_DIR = join(BUILD_DIR, "attach-files");
 const METAINFO_FILENAME = "meta.yaml";
 const ATTACH_FILENAME = "paper.pdf";
 const CREATE_ACHIVEMENT_TABLE = "CREATE TABLE achivement(id text primary key, title text, category text, book text, author_ja text, author_en text, volume number, number number, pages text, year number, month number, url text, abstract text, has_file boolean);"
@@ -42,7 +43,6 @@ const buildDatabase = (articles: Article[]) => {
     db.prepare(CREATE_ACHIVEMENT_TABLE).run();
 
     insertArticles(articles, db);
-    console.log(db.prepare("SELECT * FROM achivement;").get());
 }
 
 const insertArticles = (articles: Article[], db: Database) => {
@@ -67,12 +67,35 @@ const insertArticle = (article: Article, db: Database) => {
     } = meta;
     const serialAuthorJa = author_ja.join(",");
     const serialAuthorEn = author_en.join(",");
-    
+
     db.prepare(`INSERT INTO achivement VALUES('${id}', '${title}', '${category}', '${book}', '${serialAuthorJa}', '${serialAuthorEn}', ${volume}, ${number}, '${pages}', ${year}, ${month}, '${url}', '${abstract}', ${hasFile})`).run();
 }
 
-console.log("start build-database.ts");
-const articles = loadAllArticles(ARTICLES_DIR);
-console.log(articles);
+const collectAllAttachFiles = (articlesDir: string) => {
+    if (!existsSync(ATTACHFILES_DIR)) {
+        mkdirSync(ATTACHFILES_DIR);
+    }
+    const dirList = readdirSync(articlesDir, {withFileTypes: true}).filter(dirent => dirent.isDirectory()).map(dirent => resolve(articlesDir, dirent.name));
+    dirList.forEach(dir => collectAttachFile(dir));
+}
 
-buildDatabase(articles);
+const collectAttachFile = (articleDir: string) => {
+    const attachFilePath = join(articleDir, ATTACH_FILENAME);
+
+    if (existsSync(attachFilePath)) {
+        const filename = basename(articleDir) + ".pdf";
+        const destinationPath = join(ATTACHFILES_DIR, filename);
+        copyFileSync(attachFilePath, destinationPath);
+    }
+}
+
+const main = () => {
+    console.log("start build-database.ts");
+
+    // db構築
+    const articles = loadAllArticles(ARTICLES_DIR);
+    buildDatabase(articles);
+
+    // 添付ファイル収集
+    collectAllAttachFiles(ARTICLES_DIR);
+}
