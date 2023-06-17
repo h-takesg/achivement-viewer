@@ -6,8 +6,8 @@ import { fileURLToPath } from "url";
 import DB, {Database} from "better-sqlite3";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
-const ARTICLES_DIR = resolve(SCRIPT_DIR, "../articles");
-const BUILD_DIR = resolve(SCRIPT_DIR, "../build");
+const ARTICLES_DIR = resolve(SCRIPT_DIR, "../../articles");
+const BUILD_DIR = resolve(SCRIPT_DIR, "../../build");
 const DATABASE_FILENAME = "achivement.sqlite3";
 const DATABASE_FILEPATH = join(BUILD_DIR, DATABASE_FILENAME);
 const ATTACHFILES_DIR = join(BUILD_DIR, "attach-files");
